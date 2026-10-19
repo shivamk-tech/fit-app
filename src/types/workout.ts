@@ -19,6 +19,8 @@ export interface StreakDay {
   day: string;
   date: string;
   done: boolean;
+  /** Marks the current calendar day in the weekly row. */
+  isToday?: boolean;
 }
 
 export type SessionStatus = 'in_progress' | 'completed' | 'cancelled';

@@ -10,11 +10,15 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { ProfileHeader } from '../components/ProfileHeader';
+import { StepsCard } from '../components/StepsCard';
 import { WeeklyStreak } from '../components/WeeklyStreak';
 import { WorkoutCard } from '../components/WorkoutCard';
+import { nextStreakDayIndex, settleStreakReward } from '../services/streakRewards';
+import { localDateKey } from '../services/stepMath';
 import {
   calculateStreak,
   getCompletedSessions,
+  sessionDateKey,
 } from '../services/workoutStorage';
 import { COLORS } from '../theme/colors';
 import { FONTS } from '../theme/typography';
@@ -27,22 +31,24 @@ function buildStreakDays(completedSessions: WorkoutSession[]) {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - (6 - i));
-    const dateStr = d.toISOString().slice(0, 10);
+    const dateStr = localDateKey(d);
     const dayLabel = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][d.getDay()];
-    const done = completedSessions.some(
-      s => s.completedAt?.slice(0, 10) === dateStr,
-    );
-    return { day: dayLabel, date: String(d.getDate()), done };
+    const done = completedSessions.some(s => sessionDateKey(s) === dateStr);
+    return { day: dayLabel, date: String(d.getDate()), done, isToday: i === 6 };
   });
 }
 
 export function HomeScreen({ navigation }: HomeScreenProps) {
   const [completedSessions, setCompletedSessions] = useState<WorkoutSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [streakClaimedToday, setStreakClaimedToday] = useState(false);
 
   const loadHistory = useCallback(async () => {
     const sessions = await getCompletedSessions();
     setCompletedSessions(sessions);
+    // Pays today's streak bonus if a workout was finished and it is still unpaid.
+    const streakStatus = await settleStreakReward(sessions);
+    setStreakClaimedToday(streakStatus.claimedToday);
     setLoading(false);
   }, []);
 
@@ -63,6 +69,8 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const streakCount = calculateStreak(completedSessions);
   const streakDays = buildStreakDays(completedSessions);
   const isFirstTimeUser = !loading && completedSessions.length === 0;
+  const workedOutToday = streakDays[6]?.done ?? false;
+  const rewardDayIndex = nextStreakDayIndex(streakCount, workedOutToday);
 
   return (
     <ScrollView
@@ -82,6 +90,9 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         <Text style={styles.startButtonText}>Start Workout</Text>
         <Text style={styles.startButtonArrow}>→</Text>
       </Pressable>
+
+      {/* Steps + coins — always visible */}
+      <StepsCard />
 
       {loading ? (
         <View style={styles.loadingWrap}>
@@ -107,6 +118,8 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 ? `${streakCount}-day streak — keep it up!`
                 : 'Complete a workout to start your streak.'
             }
+            rewardDayIndex={rewardDayIndex}
+            todayClaimed={workedOutToday && streakClaimedToday}
           />
 
           <View style={styles.sectionHeader}>

@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { COLORS } from '../theme/colors';
 import { FONTS } from '../theme/typography';
+import { settleStreakReward, streakRewardCoins } from '../services/streakRewards';
+import type { StreakRewardStatus } from '../services/streakRewards';
 import { loadSessions } from '../services/workoutStorage';
 import type { WorkoutCompleteScreenProps } from '../types/navigation';
 import type { WorkoutSession } from '../types/workout';
@@ -26,11 +28,14 @@ export function WorkoutCompleteScreen({
 }: WorkoutCompleteScreenProps) {
   const { sessionId } = route.params;
   const [session, setSession] = useState<WorkoutSession | null>(null);
+  const [streak, setStreak] = useState<StreakRewardStatus | null>(null);
 
   useEffect(() => {
-    loadSessions().then(all => {
+    loadSessions().then(async all => {
       const found = all.find(s => s.id === sessionId) ?? null;
       setSession(found);
+      // Pay today's streak bonus (no-op if already paid).
+      setStreak(await settleStreakReward(all));
     });
   }, [sessionId]);
 
@@ -66,12 +71,21 @@ export function WorkoutCompleteScreen({
           </View>
         )}
 
-        <View style={styles.notice}>
-          <Text style={styles.noticeText}>
-            Your workout has been saved locally. Points and rewards will be
-            calculated server-side once the backend is connected.
-          </Text>
-        </View>
+        {streak && streak.dayIndex > 0 && (
+          <View style={styles.bonus}>
+            <Text style={styles.bonusTitle}>
+              🔥 Day {streak.dayIndex} streak bonus
+            </Text>
+            <Text style={styles.bonusCoins}>
+              {streak.awarded > 0
+                ? `+${streak.awarded} coins`
+                : `${streakRewardCoins(streak.dayIndex)} coins already earned today`}
+            </Text>
+            <Text style={styles.noticeText}>
+              Keep your streak going tomorrow to earn even more.
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.footer}>
@@ -141,11 +155,25 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 4,
   },
-  notice: {
-    backgroundColor: COLORS.surface,
+  bonus: {
+    backgroundColor: COLORS.primaryLight,
     borderRadius: 16,
     padding: 16,
     marginTop: 24,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+  },
+  bonusTitle: {
+    fontFamily: FONTS.semibold,
+    fontSize: 13,
+    color: COLORS.text,
+  },
+  bonusCoins: {
+    fontFamily: FONTS.bold,
+    fontSize: 24,
+    color: COLORS.primary,
+    marginTop: 6,
+    marginBottom: 6,
   },
   noticeText: {
     fontFamily: FONTS.regular,

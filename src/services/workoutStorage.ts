@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { WorkoutSession } from '../types/workout';
+import { localDateKey } from './stepMath';
 
 const SESSIONS_KEY = '@fitrewards/workout_sessions';
 
@@ -29,11 +30,17 @@ export async function getCompletedSessions(): Promise<WorkoutSession[]> {
   return sessions.filter(s => s.status === 'completed');
 }
 
-/** Returns unique workout dates (YYYY-MM-DD) for streak calculation */
+/** Local calendar date (YYYY-MM-DD) a session was completed on, or null. */
+export function sessionDateKey(session: WorkoutSession): string | null {
+  if (session.status !== 'completed' || !session.completedAt) return null;
+  return localDateKey(new Date(session.completedAt));
+}
+
+/** Returns unique local workout dates (YYYY-MM-DD) for streak calculation */
 export function getWorkoutDates(sessions: WorkoutSession[]): string[] {
   const dates = sessions
-    .filter(s => s.status === 'completed' && s.completedAt)
-    .map(s => s.completedAt!.slice(0, 10));
+    .map(sessionDateKey)
+    .filter((d): d is string => d !== null);
   return [...new Set(dates)].sort();
 }
 
