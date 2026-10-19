@@ -9,8 +9,13 @@
 /* Begin PBXBuildFile section */
 		0C80B921A6F3F58F76C31292 /* libPods-fitrewards.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-fitrewards.a */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		589CC9D2D7F04E49B19D41EB /* Switzer-Semibold.otf in Resources */ = {isa = PBXBuildFile; fileRef = C815E8EA1ECD4076B2D4409A /* Switzer-Semibold.otf */; };
+		5DE43A37D2CA4E488313449B /* Switzer-Medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = BAF7A6B401EC4DCF91C36CC4 /* Switzer-Medium.otf */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		A9350FE1EAEE4DFD6F18466B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
+		BC822928786844239F96C049 /* Switzer-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = BB77951196354DCE99AB84BD /* Switzer-Regular.otf */; };
+		BDC7BED8D3CE4DD99A9A9CE6 /* Switzer-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = BE23E824B4FE49139BB4EA8E /* Switzer-Bold.otf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -23,6 +28,10 @@
 		5DCACB8F33CDC322A6C60F78 /* libPods-fitrewards.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-fitrewards.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = fitrewards/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = fitrewards/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		BAF7A6B401EC4DCF91C36CC4 /* Switzer-Medium.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Switzer-Medium.otf"; path = "../assets/fonts/Switzer-Medium.otf"; sourceTree = "<group>"; };
+		BB77951196354DCE99AB84BD /* Switzer-Regular.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Switzer-Regular.otf"; path = "../assets/fonts/Switzer-Regular.otf"; sourceTree = "<group>"; };
+		BE23E824B4FE49139BB4EA8E /* Switzer-Bold.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Switzer-Bold.otf"; path = "../assets/fonts/Switzer-Bold.otf"; sourceTree = "<group>"; };
+		C815E8EA1ECD4076B2D4409A /* Switzer-Semibold.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Switzer-Semibold.otf"; path = "../assets/fonts/Switzer-Semibold.otf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -59,6 +68,18 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		5F02C058CFEA4637976A6EEC /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				BE23E824B4FE49139BB4EA8E /* Switzer-Bold.otf */,
+				BB77951196354DCE99AB84BD /* Switzer-Regular.otf */,
+				C815E8EA1ECD4076B2D4409A /* Switzer-Semibold.otf */,
+				BAF7A6B401EC4DCF91C36CC4 /* Switzer-Medium.otf */,
+			);
+			name = Resources;
+			path = "";
+			sourceTree = "<group>";
+		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
 			isa = PBXGroup;
 			children = (
@@ -74,6 +95,7 @@
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
+				5F02C058CFEA4637976A6EEC /* Resources */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -159,6 +181,11 @@
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
+				BDC7BED8D3CE4DD99A9A9CE6 /* Switzer-Bold.otf in Resources */,
+				BC822928786844239F96C049 /* Switzer-Regular.otf in Resources */,
+				589CC9D2D7F04E49B19D41EB /* Switzer-Semibold.otf in Resources */,
+				5DE43A37D2CA4E488313449B /* Switzer-Medium.otf in Resources */,
+				A9350FE1EAEE4DFD6F18466B /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -370,6 +397,10 @@
 				);
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
+				);
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DFOLLY_NO_CONFIG",
@@ -377,8 +408,13 @@
 					"-DFOLLY_USE_LIBCPP=1",
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
 				);
+				PODFILE_DIR = "$(SRCROOT)";
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+				USE_HERMES = true;
 			};
 			name = Debug;
 		};
@@ -435,6 +471,10 @@
 					"\"$(inherited)\"",
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
+				);
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DFOLLY_NO_CONFIG",
@@ -442,8 +482,12 @@
 					"-DFOLLY_USE_LIBCPP=1",
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
 				);
+				PODFILE_DIR = "$(SRCROOT)";
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
+				USE_HERMES = true;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
