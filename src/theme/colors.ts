@@ -1,8 +1,9 @@
 
 export const COLORS = {
-  primary: '#FF7900',
-  primaryLight: '#FFF0E1',
-  primarySoft: '#FFF3E8',
+  // Brand blue + white
+  primary: '#005792',
+  primaryLight: '#E3EEF6',
+  primarySoft: '#EEF4F9',
 
   background: '#FFFFFF',
   surface: '#F3F3F3',

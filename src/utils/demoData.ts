@@ -17,7 +17,7 @@ export const DEMO_WORKOUTS: Workout[] = [
     name: 'Full Body Workout',
     detail: '5 exercises · ~20 min',
     icon: '🏋️',
-    tint: '#FFF0E1',
+    tint: '#E3EEF6',
     exercises: [
       {
         id: '1-1',
