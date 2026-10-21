@@ -68,6 +68,18 @@ export async function loginUser(
   return { ok: false, status: 0, message: 'Backend not yet connected.' };
 }
 
+/**
+ * Stub — not yet connected.
+ * Exchanges a Google ID token for app tokens. The backend should verify the
+ * token against GOOGLE_WEB_CLIENT_ID and create the user on first sign-in.
+ */
+export async function authenticateWithGoogle(
+  _idToken: string,
+): Promise<ApiResult<AuthTokens>> {
+  // TODO: return request<AuthTokens>('/auth/google/', { method: 'POST', body: JSON.stringify({ id_token: _idToken }) });
+  return { ok: false, status: 0, message: 'Backend not yet connected.' };
+}
+
 // ── Workouts ──────────────────────────────────────────────────────────────────
 
 /** Stub — not yet connected. */

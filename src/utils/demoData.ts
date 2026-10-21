@@ -66,7 +66,7 @@ export const DEMO_WORKOUTS: Workout[] = [
     name: 'Upper Body Strength',
     detail: '4 exercises · ~15 min',
     icon: '💪',
-    tint: '#EAF1FF',
+    tint: '#FFF1E6',
     exercises: [
       {
         id: '2-1',

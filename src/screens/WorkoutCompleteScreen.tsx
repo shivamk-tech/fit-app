@@ -1,16 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import {
-  Pressable,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { FadeIn } from '../components/ui/FadeIn';
+import { PressableScale } from '../components/ui/PressableScale';
 import { COLORS } from '../theme/colors';
+import { CARD, RADII, SHADOWS } from '../theme/layout';
 import { FONTS } from '../theme/typography';
-import { settleStreakReward, streakRewardCoins } from '../services/streakRewards';
-import type { StreakRewardStatus } from '../services/streakRewards';
+import { ClaimRewardButton } from '../components/ClaimRewardButton';
+import { FitCoin, FITCOINS } from '../components/FitCoin';
+import { checkIn, getCheckInStatus } from '../services/streakRewards';
+import type { CheckInStatus } from '../services/streakRewards';
 import { loadSessions } from '../services/workoutStorage';
 import type { WorkoutCompleteScreenProps } from '../types/navigation';
 import type { WorkoutSession } from '../types/workout';
@@ -22,40 +21,106 @@ function formatDuration(seconds: number | null): string {
   return `${m}m ${s}s`;
 }
 
+/** Counts from 0 up to `value` once it is known. */
+function CountUp({ value, style }: { value: number; style: object }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  const [shown, setShown] = useState(0);
+
+  useEffect(() => {
+    const id = anim.addListener(({ value: v }) => setShown(Math.round(v)));
+    Animated.timing(anim, {
+      toValue: value,
+      duration: 900,
+      delay: 350,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+    return () => anim.removeListener(id);
+  }, [anim, value]);
+
+  return (
+    <View style={coinRow.row}>
+      <FitCoin size={30} />
+      <Text style={style}>
+        +{shown} {FITCOINS}
+      </Text>
+    </View>
+  );
+}
+
 export function WorkoutCompleteScreen({
   navigation,
   route,
 }: WorkoutCompleteScreenProps) {
   const { sessionId } = route.params;
   const [session, setSession] = useState<WorkoutSession | null>(null);
-  const [streak, setStreak] = useState<StreakRewardStatus | null>(null);
+  const [streak, setStreak] = useState<CheckInStatus | null>(null);
+
+  const pop = useRef(new Animated.Value(0)).current;
+  const ring = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadSessions().then(async all => {
       const found = all.find(s => s.id === sessionId) ?? null;
       setSession(found);
-      // Pay today's streak bonus (no-op if already paid).
-      setStreak(await settleStreakReward(all));
+      // Offer today's daily check-in here too if it hasn't been done yet.
+      setStreak(await getCheckInStatus());
     });
   }, [sessionId]);
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(pop, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 8,
+        bounciness: 14,
+      }),
+      Animated.timing(ring, {
+        toValue: 1,
+        duration: 1100,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [pop, ring]);
 
   const goHome = () =>
     navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
 
+  const ringScale = ring.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.8, 1.7],
+  });
+  const ringOpacity = ring.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.5, 0],
+  });
+
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
       <View style={styles.body}>
-        <View style={styles.iconWrap}>
-          <Text style={styles.icon}>🎉</Text>
+        <View style={styles.iconStage}>
+          <Animated.View
+            style={[
+              styles.ring,
+              { opacity: ringOpacity, transform: [{ scale: ringScale }] },
+            ]}
+          />
+          <Animated.View
+            style={[styles.iconWrap, { transform: [{ scale: pop }] }]}
+          >
+            <Text style={styles.icon}>🎉</Text>
+          </Animated.View>
         </View>
-        <Text style={styles.title}>Workout complete!</Text>
-        <Text style={styles.subtitle}>
-          Great work. Every session counts.
-        </Text>
+
+        <FadeIn delay={150}>
+          <Text style={styles.title}>Workout complete!</Text>
+          <Text style={styles.subtitle}>Great work. Every session counts.</Text>
+        </FadeIn>
 
         {session && (
-          <View style={styles.statsRow}>
+          <FadeIn delay={250} style={styles.statsRow}>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>
                 {session.completedExercises.length}
@@ -68,30 +133,56 @@ export function WorkoutCompleteScreen({
               </Text>
               <Text style={styles.statLabel}>Duration</Text>
             </View>
-          </View>
+          </FadeIn>
         )}
 
         {streak && streak.dayIndex > 0 && (
-          <View style={styles.bonus}>
-            <Text style={styles.bonusTitle}>
-              🔥 Day {streak.dayIndex} streak bonus
+          <FadeIn delay={350} style={styles.bonus}>
+            <View style={styles.bonusBadge}>
+              <Text style={styles.bonusTitle}>
+                🔥 Day {streak.dayIndex} daily check-in
+              </Text>
+            </View>
+            {streak.awarded > 0 ? (
+              <CountUp value={streak.awarded} style={styles.bonusCoins} />
+            ) : !streak.checkedInToday ? (
+              <View style={coinRow.row}>
+                <FitCoin size={30} />
+                <Text style={styles.bonusCoins}>
+                  {streak.coins} {FITCOINS}
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.bonusCoinsMuted}>
+                Checked in today · {streak.coins} {FITCOINS}
+              </Text>
+            )}
+            {!streak.checkedInToday && (
+              <View style={styles.claim}>
+                <ClaimRewardButton
+                  coins={streak.coins}
+                  action="Check in"
+                  onClaim={async () => setStreak(await checkIn())}
+                />
+              </View>
+            )}
+            <Text style={[styles.noticeText, styles.noticeSpacing]}>
+              {streak.checkedInToday
+                ? 'Check in again tomorrow to keep your streak going.'
+                : 'Check in every day. Miss one and the streak restarts.'}
             </Text>
-            <Text style={styles.bonusCoins}>
-              {streak.awarded > 0
-                ? `+${streak.awarded} coins`
-                : `${streakRewardCoins(streak.dayIndex)} coins already earned today`}
-            </Text>
-            <Text style={styles.noticeText}>
-              Keep your streak going tomorrow to earn even more.
-            </Text>
-          </View>
+          </FadeIn>
         )}
       </View>
 
       <View style={styles.footer}>
-        <Pressable style={styles.homeButton} onPress={goHome}>
+        <PressableScale
+          style={styles.homeButton}
+          onPress={goHome}
+          accessibilityRole="button"
+        >
           <Text style={styles.homeButtonText}>Back to Home</Text>
-        </Pressable>
+        </PressableScale>
       </View>
     </SafeAreaView>
   );
@@ -106,28 +197,43 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 28,
+    paddingHorizontal: 24,
   },
-  iconWrap: {
-    width: 100,
-    height: 100,
-    borderRadius: 30,
-    backgroundColor: COLORS.primaryLight,
+  iconStage: {
+    width: 140,
+    height: 140,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
-  icon: { fontSize: 52 },
+  ring: {
+    position: 'absolute',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 3,
+    borderColor: COLORS.primary,
+  },
+  iconWrap: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: COLORS.surfaceWhite,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.raised,
+  },
+  icon: { fontSize: 54 },
   title: {
     fontFamily: FONTS.bold,
     fontSize: 30,
     color: COLORS.text,
-    letterSpacing: -0.5,
+    letterSpacing: -0.6,
     textAlign: 'center',
   },
   subtitle: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: 15,
     color: COLORS.textSecondary,
     marginTop: 8,
     textAlign: 'center',
@@ -136,11 +242,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginTop: 32,
+    alignSelf: 'stretch',
   },
   statCard: {
+    ...CARD,
     flex: 1,
-    backgroundColor: COLORS.surface,
-    borderRadius: 18,
     paddingVertical: 18,
     alignItems: 'center',
   },
@@ -151,33 +257,52 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: 12,
     color: COLORS.textSecondary,
     marginTop: 4,
   },
   bonus: {
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 24,
+    ...CARD,
+    marginTop: 12,
     alignItems: 'center',
     alignSelf: 'stretch',
+    backgroundColor: COLORS.goldLight,
+  },
+  bonusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: RADII.pill,
+    backgroundColor: COLORS.surfaceWhite,
   },
   bonusTitle: {
     fontFamily: FONTS.semibold,
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.text,
   },
   bonusCoins: {
     fontFamily: FONTS.bold,
-    fontSize: 24,
-    color: COLORS.primary,
-    marginTop: 6,
+    fontSize: 32,
+    color: COLORS.gold,
+    letterSpacing: -0.5,
+    marginTop: 10,
     marginBottom: 6,
+  },
+  bonusCoinsMuted: {
+    fontFamily: FONTS.semibold,
+    fontSize: 15,
+    color: COLORS.text,
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  claim: {
+    alignSelf: 'stretch',
+  },
+  noticeSpacing: {
+    marginTop: 10,
   },
   noticeText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: 12,
     color: COLORS.textSecondary,
     lineHeight: 18,
     textAlign: 'center',
@@ -185,18 +310,21 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 20,
     paddingVertical: 14,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
   },
   homeButton: {
     backgroundColor: COLORS.primary,
-    borderRadius: 16,
+    borderRadius: RADII.md + 2,
     paddingVertical: 16,
     alignItems: 'center',
+    ...SHADOWS.raised,
   },
   homeButtonText: {
-    fontFamily: FONTS.semibold,
-    color: COLORS.background,
-    fontSize: 15,
+    fontFamily: FONTS.bold,
+    color: COLORS.textOnPrimary,
+    fontSize: 16,
   },
+});
+
+const coinRow = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 });

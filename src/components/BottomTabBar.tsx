@@ -1,90 +1,124 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppTab } from '../types/navigation';
 import { COLORS } from '../theme/colors';
+import { RADII, SHADOWS } from '../theme/layout';
 import { FONTS } from '../theme/typography';
+import { TabIcon } from './ui/TabIcon';
 
-const TAB_ICONS: Record<AppTab, string> = {
-  Home: '⌂',
-  Workouts: '↗',
-  Rewards: '✧',
-  Profile: '○',
-};
+const TABS: AppTab[] = ['Home', 'Workouts', 'Rewards', 'Profile'];
 
 export interface BottomTabBarProps {
   activeTab: AppTab;
   onTabPress: (tab: AppTab) => void;
 }
 
-export function BottomTabBar({ activeTab, onTabPress }: BottomTabBarProps) {
+function TabItem({
+  tab,
+  active,
+  onPress,
+}: {
+  tab: AppTab;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const progress = useRef(new Animated.Value(active ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.spring(progress, {
+      toValue: active ? 1 : 0,
+      useNativeDriver: true,
+      speed: 18,
+      bounciness: 8,
+    }).start();
+  }, [active, progress]);
+
+  const pillScale = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.6, 1],
+  });
+  const iconLift = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -1],
+  });
+  const color = active ? COLORS.primary : COLORS.textMuted;
+
   return (
-    <View style={styles.bottomNav}>
-      {(Object.keys(TAB_ICONS) as AppTab[]).map((tab) => {
-        const active = activeTab === tab;
-        return (
-          <Pressable
-            key={tab}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
-            onPress={() => onTabPress(tab)}
-            style={styles.navItem}
-          >
-            <View style={[styles.navIconWrap, active && styles.navIconActive]}>
-              <Text style={[styles.navIcon, active && styles.navIconSelected]}>
-                {TAB_ICONS[tab]}
-              </Text>
-            </View>
-            <Text style={[styles.navLabel, active && styles.navLabelActive]}>
-              {tab}
-            </Text>
-          </Pressable>
-        );
-      })}
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={tab}
+      accessibilityState={{ selected: active }}
+      onPress={onPress}
+      style={styles.navItem}
+      hitSlop={6}
+    >
+      <View style={styles.iconWrap}>
+        <Animated.View
+          style={[
+            styles.pill,
+            { opacity: progress, transform: [{ scale: pillScale }] },
+          ]}
+        />
+        <Animated.View style={{ transform: [{ translateY: iconLift }] }}>
+          <TabIcon tab={tab} color={color} />
+        </Animated.View>
+      </View>
+      <Text style={[styles.label, active && styles.labelActive]}>{tab}</Text>
+    </Pressable>
+  );
+}
+
+export function BottomTabBar({ activeTab, onTabPress }: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+      {TABS.map(tab => (
+        <TabItem
+          key={tab}
+          tab={tab}
+          active={activeTab === tab}
+          onPress={() => onTabPress(tab)}
+        />
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bottomNav: {
+  bar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingTop: 9,
-    paddingBottom: 5,
-    backgroundColor: COLORS.background,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    paddingTop: 10,
+    backgroundColor: COLORS.surfaceWhite,
+    borderTopLeftRadius: RADII.xl,
+    borderTopRightRadius: RADII.xl,
+    ...SHADOWS.raised,
   },
   navItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 66,
-    paddingVertical: 2,
+    minWidth: 68,
   },
-  navIconWrap: {
-    width: 43,
-    height: 30,
+  iconWrap: {
+    width: 52,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 11,
   },
-  navIconActive: {
+  pill: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: RADII.pill,
     backgroundColor: COLORS.primaryLight,
   },
-  navIcon: {
-    fontSize: 22,
-    color: COLORS.textSecondary,
-  },
-  navIconSelected: {
-    color: COLORS.primary,
-  },
-  navLabel: {
+  label: {
     fontFamily: FONTS.medium,
-    fontSize: 9,
-    marginTop: 3,
-    color: COLORS.textSecondary,
+    fontSize: 11,
+    marginTop: 4,
+    color: COLORS.textMuted,
   },
-  navLabelActive: {
+  labelActive: {
     fontFamily: FONTS.semibold,
     color: COLORS.primary,
   },

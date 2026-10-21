@@ -12,8 +12,8 @@ export interface StepState {
   lastSensor: number | null;
   /** Steps walked today. */
   steps: number;
-  /** How many STEPS_PER_REWARD blocks have already been paid out today. */
-  rewardedUnits: number;
+  /** Whether today's DAILY_GOAL_COINS have been claimed. */
+  goalRewarded: boolean;
 }
 
 /** One entry in the coin ledger. */
@@ -35,13 +35,37 @@ export interface CoinWallet {
 /** Daily totals, keyed by YYYY-MM-DD. */
 export type StepHistory = Record<string, number>;
 
-export type StepSource = 'sensor' | 'manual' | 'unavailable';
+/**
+ * Where today's steps come from, in order of preference:
+ * Health Connect (full day, from midnight) → phone sensor (from first app
+ * open) → manual (dev builds only) → unavailable.
+ */
+export type StepSource =
+  | 'connecting' // still working out which source to use (app start)
+  | 'healthConnect'
+  | 'sensor'
+  | 'manual'
+  | 'unavailable';
+
+/** Health Connect state, so the UI can offer the right fix. */
+export type HealthConnectStatus =
+  | 'unsupported' // not Android
+  | 'notInstalled'
+  | 'updateRequired'
+  | 'permissionDenied'
+  | 'connected';
 
 export interface StepSnapshot {
   todaySteps: number;
   todayCoins: number;
-  stepsToNextReward: number;
-  progressToNextReward: number; // 0..1
+  stepsToGoal: number;
+  goalProgress: number; // 0..1
+  goalReached: boolean;
+  /** Goal reached today but its coins not yet claimed. */
+  goalClaimable: boolean;
+  healthConnect: HealthConnectStatus;
+  /** ISO time of the last successful Health Connect read. */
+  lastSyncedAt: string | null;
   wallet: CoinWallet;
   history: StepHistory;
   source: StepSource;

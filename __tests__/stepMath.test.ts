@@ -1,13 +1,15 @@
-import { COINS_PER_REWARD, STEPS_PER_REWARD } from '../src/config/rewards';
+import { DAILY_GOAL_COINS, DAILY_STEP_GOAL } from '../src/config/rewards';
 import {
   addManualSteps,
+  applyDayTotal,
   applySensorReading,
   coinsForSteps,
   emptyStepState,
+  goalProgress,
   localDateKey,
-  progressToNextReward,
-  settleRewards,
-  stepsToNextReward,
+  claimGoalReward,
+  startOfLocalDay,
+  stepsToGoal,
 } from '../src/services/stepMath';
 
 const TODAY = '2026-10-20';
@@ -33,7 +35,7 @@ describe('applySensorReading', () => {
     s = applySensorReading(s, 8100, TOMORROW);
     expect(s.date).toBe(TOMORROW);
     expect(s.steps).toBe(0);
-    expect(s.rewardedUnits).toBe(0);
+    expect(s.goalRewarded).toBe(false);
   });
 
   test('a device reboot (counter goes backwards) keeps the steps already walked', () => {
@@ -66,50 +68,89 @@ describe('addManualSteps', () => {
   });
 });
 
-describe('settleRewards', () => {
-  test('pays nothing below the first milestone', () => {
-    const s = { ...emptyStepState(TODAY), steps: STEPS_PER_REWARD - 1 };
-    expect(settleRewards(s).coinsEarned).toBe(0);
+describe('applyDayTotal (Health Connect)', () => {
+  test('takes the full-day total, including steps from before the app opened', () => {
+    const s = applyDayTotal(emptyStepState(TODAY), 6400, TODAY);
+    expect(s.steps).toBe(6400);
   });
 
-  test('pays coins exactly at the milestone', () => {
-    const s = { ...emptyStepState(TODAY), steps: STEPS_PER_REWARD };
-    const r = settleRewards(s);
-    expect(r.coinsEarned).toBe(COINS_PER_REWARD);
-    expect(r.state.rewardedUnits).toBe(1);
+  test('replaces steps counted by another source (no carry-over)', () => {
+    let s = addManualSteps(emptyStepState(TODAY), 9500, TODAY);
+    s = applyDayTotal(s, 0, TODAY);
+    expect(s.steps).toBe(0);
   });
 
-  test('does not pay the same milestone twice', () => {
-    const s = { ...emptyStepState(TODAY), steps: STEPS_PER_REWARD + 10 };
-    const first = settleRewards(s);
-    const second = settleRewards(first.state);
-    expect(first.coinsEarned).toBe(COINS_PER_REWARD);
-    expect(second.coinsEarned).toBe(0);
+  test('keeps goalRewarded so a source switch never pays twice', () => {
+    const paid = { ...emptyStepState(TODAY), steps: 10000, goalRewarded: true };
+    const s = applyDayTotal(paid, 10500, TODAY);
+    expect(claimGoalReward(s).coinsEarned).toBe(0);
   });
 
-  test('pays for several milestones crossed at once', () => {
-    const s = { ...emptyStepState(TODAY), steps: STEPS_PER_REWARD * 3 + 5 };
-    const r = settleRewards(s);
-    expect(r.unitsEarned).toBe(3);
-    expect(r.coinsEarned).toBe(COINS_PER_REWARD * 3);
+  test('a new day starts from that day’s total, not yesterday’s', () => {
+    let s = applyDayTotal(emptyStepState(TODAY), 12000, TODAY);
+    s = { ...s, goalRewarded: true };
+    s = applyDayTotal(s, 300, TOMORROW);
+    expect(s).toMatchObject({
+      date: TOMORROW,
+      steps: 300,
+      goalRewarded: false,
+    });
+  });
+});
+
+describe('claimGoalReward (daily goal)', () => {
+  test(`pays nothing below ${DAILY_STEP_GOAL} steps`, () => {
+    const s = { ...emptyStepState(TODAY), steps: DAILY_STEP_GOAL - 1 };
+    expect(claimGoalReward(s).coinsEarned).toBe(0);
+  });
+
+  test(`pays ${DAILY_GOAL_COINS} coins exactly at the goal`, () => {
+    const s = { ...emptyStepState(TODAY), steps: DAILY_STEP_GOAL };
+    const r = claimGoalReward(s);
+    expect(r.coinsEarned).toBe(DAILY_GOAL_COINS);
+    expect(r.state.goalRewarded).toBe(true);
+  });
+
+  test('pays only once per day', () => {
+    const s = { ...emptyStepState(TODAY), steps: DAILY_STEP_GOAL };
+    const first = claimGoalReward(s);
+    const later = claimGoalReward({
+      ...first.state,
+      steps: DAILY_STEP_GOAL * 2,
+    });
+    expect(first.coinsEarned).toBe(DAILY_GOAL_COINS);
+    expect(later.coinsEarned).toBe(0);
+  });
+
+  test('walking double the goal still pays the same amount', () => {
+    const s = { ...emptyStepState(TODAY), steps: DAILY_STEP_GOAL * 2 };
+    expect(claimGoalReward(s).coinsEarned).toBe(DAILY_GOAL_COINS);
   });
 });
 
 describe('helpers', () => {
-  test('stepsToNextReward counts down and resets after a milestone', () => {
-    expect(stepsToNextReward(0)).toBe(STEPS_PER_REWARD);
-    expect(stepsToNextReward(400)).toBe(STEPS_PER_REWARD - 400);
-    expect(stepsToNextReward(STEPS_PER_REWARD)).toBe(STEPS_PER_REWARD);
+  test('stepsToGoal counts down and stops at zero', () => {
+    expect(stepsToGoal(0)).toBe(DAILY_STEP_GOAL);
+    expect(stepsToGoal(2500)).toBe(DAILY_STEP_GOAL - 2500);
+    expect(stepsToGoal(DAILY_STEP_GOAL + 50)).toBe(0);
   });
 
-  test('progressToNextReward is a 0..1 fraction', () => {
-    expect(progressToNextReward(0)).toBe(0);
-    expect(progressToNextReward(STEPS_PER_REWARD / 2)).toBe(0.5);
-    expect(progressToNextReward(STEPS_PER_REWARD)).toBe(0);
+  test('goalProgress is a 0..1 fraction capped at 1', () => {
+    expect(goalProgress(0)).toBe(0);
+    expect(goalProgress(DAILY_STEP_GOAL / 2)).toBe(0.5);
+    expect(goalProgress(DAILY_STEP_GOAL * 3)).toBe(1);
   });
 
-  test('coinsForSteps mirrors the reward rule', () => {
-    expect(coinsForSteps(STEPS_PER_REWARD * 2 + 999)).toBe(COINS_PER_REWARD * 2);
+  test('coinsForSteps mirrors the goal rule', () => {
+    expect(coinsForSteps(DAILY_STEP_GOAL - 1)).toBe(0);
+    expect(coinsForSteps(DAILY_STEP_GOAL)).toBe(DAILY_GOAL_COINS);
+  });
+
+  test('startOfLocalDay is local midnight', () => {
+    const d = startOfLocalDay('2026-10-20');
+    expect([d.getFullYear(), d.getMonth(), d.getDate(), d.getHours()]).toEqual([
+      2026, 9, 20, 0,
+    ]);
   });
 
   test('localDateKey uses the local calendar date', () => {

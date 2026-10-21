@@ -14,14 +14,12 @@ export function AICoachBanner({ onPress }: AICoachBannerProps) {
         <View style={styles.aiBadge}>
           <Text style={styles.aiBadgeText}>✦ YOUR PERSONAL AI COACH</Text>
         </View>
-        <Text style={styles.coachTitle}>
-          Your goals.{ '\n' }Your workout.
-        </Text>
+        <Text style={styles.coachTitle}>Your goals.{'\n'}Your workout.</Text>
         <Text style={styles.coachDescription}>
           Find the right workout for your fitness journey.
         </Text>
         <View style={styles.coachButton}>
-          <Text style={styles.coachButtonText}>Explore workouts  →</Text>
+          <Text style={styles.coachButtonText}>Explore workouts →</Text>
         </View>
       </View>
       <View style={styles.coachIllustration}>
@@ -84,7 +82,7 @@ const styles = StyleSheet.create({
   },
   coachButtonText: {
     fontFamily: FONTS.semibold,
-    color: COLORS.background,
+    color: COLORS.textOnPrimary,
     fontSize: 10,
   },
   coachIllustration: {

@@ -3,6 +3,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Needed to read the hardware step counter on Android 10+ -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- Health Connect: read the day's step total -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+
+    <!-- Lets the app find the Health Connect app on Android 13 and below -->
+    <queries>
+      <package android:name="com.google.android.apps.healthdata" />
+    </queries>
 
     <application
       android:name=".MainApplication"
@@ -24,6 +31,22 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
+        <!-- Health Connect (Android 13 and below) opens this to show why we need step data -->
+        <intent-filter>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+        </intent-filter>
       </activity>
+
+      <!-- Health Connect (Android 14+) privacy-policy / permission-usage entry point -->
+      <activity-alias
+        android:name="ViewPermissionUsageActivity"
+        android:exported="true"
+        android:targetActivity=".MainActivity"
+        android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+            <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+        </intent-filter>
+      </activity-alias>
     </application>
 </manifest>

@@ -1,27 +1,35 @@
 import React from 'react';
-import {
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { FadeIn } from '../components/ui/FadeIn';
+import { PressableScale } from '../components/ui/PressableScale';
+import { ScreenHeader } from '../components/ui/ScreenHeader';
 import { COLORS } from '../theme/colors';
+import { CARD, RADII, SHADOWS } from '../theme/layout';
 import { FONTS } from '../theme/typography';
 import type { WorkoutDetailScreenProps } from '../types/navigation';
 import { DEMO_WORKOUTS } from '../utils/demoData';
 
-export function WorkoutDetailScreen({ navigation, route }: WorkoutDetailScreenProps) {
+export function WorkoutDetailScreen({
+  navigation,
+  route,
+}: WorkoutDetailScreenProps) {
   const workout = DEMO_WORKOUTS.find(w => w.id === route.params.workoutId);
 
   if (!workout) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <ScreenHeader
+          title="Workout details"
+          onBack={() => navigation.goBack()}
+        />
         <Text style={styles.errorText}>Workout not found.</Text>
-      </View>
+      </SafeAreaView>
     );
   }
+
+  const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
+  const estimate = workout.detail.split('·')[1]?.trim() ?? '—';
 
   const startSession = () =>
     navigation.replace('WorkoutSession', {
@@ -30,51 +38,75 @@ export function WorkoutDetailScreen({ navigation, route }: WorkoutDetailScreenPr
     });
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>‹</Text>
-        </Pressable>
-        <Text style={styles.eyebrow}>WORKOUT DETAILS</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <ScreenHeader
+        title="Workout details"
+        onBack={() => navigation.goBack()}
+      />
 
       <ScrollView
         removeClippedSubviews={Platform.OS === 'android'}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.iconWrap, { backgroundColor: workout.tint }]}>
-          <Text style={styles.icon}>{workout.icon}</Text>
-        </View>
-        <Text style={styles.title}>{workout.name}</Text>
-        <Text style={styles.detail}>{workout.detail}</Text>
+        <FadeIn>
+          <View style={[styles.iconWrap, { backgroundColor: workout.tint }]}>
+            <Text style={styles.icon}>{workout.icon}</Text>
+          </View>
+          <Text style={styles.title}>{workout.name}</Text>
 
-        <Text style={styles.sectionTitle}>Exercises</Text>
+          <View style={styles.statsRow}>
+            <Stat value={String(workout.exercises.length)} label="Exercises" />
+            <Stat value={String(totalSets)} label="Total sets" />
+            <Stat value={estimate.replace('~', '')} label="Duration" />
+          </View>
+        </FadeIn>
+
+        <FadeIn delay={80}>
+          <Text style={styles.sectionTitle}>Exercises</Text>
+        </FadeIn>
 
         {workout.exercises.map((ex, idx) => (
-          <View key={ex.id} style={styles.exerciseCard}>
-            <View style={styles.exerciseIndex}>
-              <Text style={styles.exerciseIndexText}>{idx + 1}</Text>
+          <FadeIn key={ex.id} delay={120 + idx * 50}>
+            <View style={styles.exerciseCard}>
+              <View style={styles.exerciseIndex}>
+                <Text style={styles.exerciseIndexText}>{idx + 1}</Text>
+              </View>
+              <View style={styles.exerciseBody}>
+                <Text style={styles.exerciseName}>{ex.name}</Text>
+                <View style={styles.metaPill}>
+                  <Text style={styles.exerciseMeta}>
+                    {ex.sets} sets × {ex.reps} reps
+                  </Text>
+                </View>
+                <Text style={styles.exerciseInstructions}>
+                  {ex.instructions}
+                </Text>
+              </View>
             </View>
-            <View style={styles.exerciseBody}>
-              <Text style={styles.exerciseName}>{ex.name}</Text>
-              <Text style={styles.exerciseMeta}>
-                {ex.sets} sets · {ex.reps} reps
-              </Text>
-              <Text style={styles.exerciseInstructions}>{ex.instructions}</Text>
-            </View>
-          </View>
+          </FadeIn>
         ))}
-
-        <View style={styles.bottomPad} />
       </ScrollView>
 
-      <View style={styles.footer}>
-        <Pressable style={styles.startButton} onPress={startSession}>
+      <SafeAreaView edges={['bottom']} style={styles.footer}>
+        <PressableScale
+          style={styles.startButton}
+          onPress={startSession}
+          accessibilityRole="button"
+        >
           <Text style={styles.startButtonText}>Start Workout</Text>
-        </Pressable>
-      </View>
+          <Text style={styles.startButtonArrow}>→</Text>
+        </PressableScale>
+      </SafeAreaView>
+    </SafeAreaView>
+  );
+}
+
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <View style={styles.stat}>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
 }
@@ -84,125 +116,132 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  backButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backText: {
-    color: COLORS.text,
-    fontSize: 29,
-    lineHeight: 32,
-  },
-  eyebrow: {
-    color: COLORS.textSecondary,
-    fontSize: 10,
-    fontFamily: FONTS.bold,
-    letterSpacing: 1,
-  },
-  headerSpacer: { width: 42 },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 8,
+    paddingBottom: 24,
   },
   iconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
+    width: 76,
+    height: 76,
+    borderRadius: RADII.lg + 2,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
-  icon: { fontSize: 40 },
+  icon: { fontSize: 38 },
   title: {
     fontFamily: FONTS.bold,
     fontSize: 28,
+    lineHeight: 34,
     color: COLORS.text,
-    letterSpacing: -0.5,
+    letterSpacing: -0.6,
   },
-  detail: {
+  statsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 18,
+    marginBottom: 28,
+  },
+  stat: {
+    ...CARD,
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontFamily: FONTS.bold,
+    fontSize: 18,
+    color: COLORS.text,
+  },
+  statLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: 11,
     color: COLORS.textSecondary,
-    marginTop: 6,
-    marginBottom: 24,
+    marginTop: 3,
   },
   sectionTitle: {
-    fontFamily: FONTS.semibold,
-    fontSize: 17,
+    fontFamily: FONTS.bold,
+    fontSize: 18,
     color: COLORS.text,
+    letterSpacing: -0.2,
     marginBottom: 12,
   },
   exerciseCard: {
+    ...CARD,
     flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
+    padding: 16,
+    marginBottom: 12,
   },
   exerciseIndex: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: COLORS.primaryLight,
+    width: 34,
+    height: 34,
+    borderRadius: RADII.pill,
+    backgroundColor: COLORS.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
-    marginTop: 2,
+    marginRight: 14,
   },
   exerciseIndexText: {
     fontFamily: FONTS.bold,
     color: COLORS.primary,
-    fontSize: 13,
+    fontSize: 14,
   },
   exerciseBody: { flex: 1 },
   exerciseName: {
     fontFamily: FONTS.semibold,
-    fontSize: 14,
+    fontSize: 15,
     color: COLORS.text,
+    marginTop: 1,
+  },
+  metaPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.primarySoft,
+    borderRadius: RADII.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    marginTop: 6,
   },
   exerciseMeta: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.semibold,
     fontSize: 11,
     color: COLORS.primary,
-    marginTop: 3,
   },
   exerciseInstructions: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: 13,
     color: COLORS.textSecondary,
-    lineHeight: 17,
-    marginTop: 6,
+    lineHeight: 19,
+    marginTop: 8,
   },
-  bottomPad: { height: 16 },
   footer: {
     paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: COLORS.background,
+    paddingTop: 12,
+    paddingBottom: 12,
+    backgroundColor: COLORS.surfaceWhite,
+    borderTopLeftRadius: RADII.xl,
+    borderTopRightRadius: RADII.xl,
+    ...SHADOWS.raised,
   },
   startButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 16,
-    paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADII.md + 2,
+    paddingVertical: 16,
   },
   startButtonText: {
-    fontFamily: FONTS.semibold,
-    color: COLORS.background,
-    fontSize: 15,
+    fontFamily: FONTS.bold,
+    color: COLORS.textOnPrimary,
+    fontSize: 16,
+  },
+  startButtonArrow: {
+    fontFamily: FONTS.bold,
+    color: COLORS.textOnPrimary,
+    fontSize: 18,
   },
   errorText: {
     fontFamily: FONTS.regular,

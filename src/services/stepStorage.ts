@@ -22,8 +22,17 @@ async function readJson<T>(key: string, fallback: T): Promise<T> {
   }
 }
 
-export function loadStepState(): Promise<StepState | null> {
-  return readJson<StepState | null>(STEP_STATE_KEY, null);
+type LegacyStepState = Omit<StepState, 'goalRewarded'> & {
+  goalRewarded?: boolean;
+  /** Old rule: number of 1,000-step blocks paid. 10 blocks = the 10k goal. */
+  rewardedUnits?: number;
+};
+
+export async function loadStepState(): Promise<StepState | null> {
+  const saved = await readJson<LegacyStepState | null>(STEP_STATE_KEY, null);
+  if (!saved) return null;
+  const { rewardedUnits, goalRewarded, ...rest } = saved;
+  return { ...rest, goalRewarded: goalRewarded ?? (rewardedUnits ?? 0) >= 10 };
 }
 
 export function saveStepState(state: StepState): Promise<void> {

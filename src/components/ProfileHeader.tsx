@@ -1,12 +1,15 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../theme/colors';
+import { RADII, SHADOWS } from '../theme/layout';
 import { FONTS } from '../theme/typography';
+import { PressableScale } from './ui/PressableScale';
 
 export interface ProfileHeaderProps {
   greeting: string;
   userName: string;
   avatarInitial: string;
+  photoUrl?: string | null;
   onNotificationsPress: () => void;
 }
 
@@ -14,28 +17,34 @@ export function ProfileHeader({
   greeting,
   userName,
   avatarInitial,
+  photoUrl,
   onNotificationsPress,
 }: ProfileHeaderProps) {
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{avatarInitial}</Text>
+          {photoUrl ? (
+            <Image source={{ uri: photoUrl }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarText}>{avatarInitial}</Text>
+          )}
         </View>
         <View>
           <Text style={styles.greeting}>{greeting}</Text>
           <Text style={styles.userName}>{userName}</Text>
         </View>
       </View>
-      <Pressable
+      <PressableScale
         accessibilityRole="button"
         accessibilityLabel="Notifications"
         style={styles.notificationButton}
         onPress={onNotificationsPress}
+        scaleTo={0.92}
       >
-        <Text style={styles.bell}>♧</Text>
+        <Text style={styles.bell}>🔔</Text>
         <View style={styles.notificationDot} />
-      </Pressable>
+      </PressableScale>
     </View>
   );
 }
@@ -45,58 +54,67 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 8,
+    paddingTop: 12,
     paddingBottom: 22,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 11,
+    gap: 12,
   },
   avatar: {
-    width: 47,
-    height: 47,
-    borderRadius: 17,
-    backgroundColor: COLORS.primaryLight,
+    width: 48,
+    height: 48,
+    borderRadius: RADII.pill,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: COLORS.primaryLight,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarText: {
     fontFamily: FONTS.bold,
-    color: COLORS.primary,
-    fontSize: 21,
+    color: COLORS.textOnPrimary,
+    fontSize: 19,
   },
   greeting: {
     fontFamily: FONTS.medium,
-    fontSize: 10,
+    fontSize: 12,
     color: COLORS.textSecondary,
-    letterSpacing: 0.8,
   },
   userName: {
     fontFamily: FONTS.bold,
     color: COLORS.text,
-    fontSize: 18,
-    marginTop: 3,
+    fontSize: 20,
+    marginTop: 2,
+    letterSpacing: -0.3,
   },
   notificationButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 15,
-    backgroundColor: COLORS.surface,
+    width: 46,
+    height: 46,
+    borderRadius: RADII.pill,
+    backgroundColor: COLORS.surfaceWhite,
     alignItems: 'center',
     justifyContent: 'center',
+    ...SHADOWS.card,
   },
   bell: {
-    fontSize: 24,
-    color: COLORS.text,
+    fontSize: 19,
   },
   notificationDot: {
     position: 'absolute',
-    right: 10,
-    top: 9,
-    width: 7,
-    height: 7,
+    right: 12,
+    top: 11,
+    width: 8,
+    height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.error,
+    borderWidth: 1.5,
+    borderColor: COLORS.surfaceWhite,
   },
 });

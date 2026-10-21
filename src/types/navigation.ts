@@ -11,6 +11,7 @@ export type AppTabParamList = {
 };
 
 export type RootStackParamList = {
+  Welcome: undefined;
   MainTabs: NavigatorScreenParams<AppTabParamList> | undefined;
   WorkoutDetail: { workoutId: string };
   WorkoutSession: { workoutId: string; workoutName: string };

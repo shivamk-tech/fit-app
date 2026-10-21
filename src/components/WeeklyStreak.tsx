@@ -1,90 +1,121 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useAdClaim } from '../hooks/useAdClaim';
 import { STREAK_REWARD_TABLE } from '../services/streakRewards';
 import { COLORS } from '../theme/colors';
+import { CARD, RADII } from '../theme/layout';
 import { FONTS } from '../theme/typography';
 import type { StreakDay } from '../types/workout';
+import { ClaimRewardButton } from './ClaimRewardButton';
+import { FitCoin, FITCOINS } from './FitCoin';
 
 export interface WeeklyStreakProps {
+  /** Last 7 days, oldest first; `done` = checked in that day. */
   days: StreakDay[];
-  streakLabel: string;
-  footer: string;
-  /**
-   * Position (1..7) in the reward cycle that is currently active.
-   * When `todayClaimed` is true this day has been paid; otherwise it's the
-   * day the user will earn by working out today.
-   */
+  /** Consecutive check-in days. */
+  streak: number;
+  /** 1..7: today's position in the reward cycle. */
   rewardDayIndex: number;
-  todayClaimed: boolean;
+  checkedInToday: boolean;
+  /** Pays today's check-in (called after the rewarded ad). */
+  onCheckIn: () => unknown;
 }
 
 export function WeeklyStreak({
   days,
-  streakLabel,
-  footer,
+  streak,
   rewardDayIndex,
-  todayClaimed,
+  checkedInToday,
+  onCheckIn,
 }: WeeklyStreakProps) {
-  const rewardFooter = buildRewardFooter(rewardDayIndex, todayClaimed);
+  // One ad flow shared by today's circle and the button below.
+  const claim = useAdClaim();
+  const todayCoins = STREAK_REWARD_TABLE[rewardDayIndex - 1] ?? 0;
+  const canCheckIn = !checkedInToday && !claim.loading;
 
   return (
     <View style={styles.streakCard}>
       <View style={styles.streakHeader}>
         <View>
-          <Text style={styles.cardEyebrow}>YOUR CONSISTENCY</Text>
-          <Text style={styles.streakTitle}>Weekly streak 🔥</Text>
+          <Text style={styles.cardEyebrow}>Your streak</Text>
+          <Text style={styles.streakTitle}>Daily check-in</Text>
         </View>
         <View style={styles.streakBadge}>
-          <Text style={styles.streakBadgeText}>{streakLabel}</Text>
+          <Text style={styles.streakBadgeText}>
+            🔥 {streak} {streak === 1 ? 'day' : 'days'}
+          </Text>
         </View>
       </View>
 
       <View style={styles.daysRow}>
         {days.map((item, index) => {
           const isToday = item.isToday ?? index === days.length - 1;
+          const open = isToday && !item.done;
           return (
             <View key={`${item.day}-${index}`} style={styles.dayItem}>
-              <Text style={styles.dayLabel}>{item.day}</Text>
-              <View
+              <Text style={[styles.dayLabel, isToday && styles.dayLabelToday]}>
+                {item.day}
+              </Text>
+              <Pressable
+                disabled={!open || !canCheckIn}
+                onPress={() => claim.run(onCheckIn)}
+                hitSlop={8}
+                accessibilityRole={open ? 'button' : undefined}
+                accessibilityLabel={
+                  open
+                    ? `Check in today for ${todayCoins} ${FITCOINS}`
+                    : undefined
+                }
                 style={[
                   styles.dayCircle,
                   item.done && styles.dayCircleDone,
-                  isToday && styles.dayCircleToday,
+                  open && styles.dayCircleOpen,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.dateLabel,
-                    item.done && styles.dateLabelDone,
-                    isToday && !item.done && styles.dateLabelToday,
-                  ]}
-                >
-                  {item.done ? '✓' : item.date}
-                </Text>
-              </View>
+                {open && claim.loading ? (
+                  <ActivityIndicator size="small" color={COLORS.gold} />
+                ) : (
+                  <Text
+                    style={[
+                      styles.dateLabel,
+                      item.done && styles.dateLabelDone,
+                      open && styles.dateLabelOpen,
+                    ]}
+                  >
+                    {item.done ? '✓' : item.date}
+                  </Text>
+                )}
+              </Pressable>
+              <Text style={styles.tapLabel}>{open ? 'TAP' : ' '}</Text>
             </View>
           );
         })}
       </View>
-      <Text style={styles.streakFooter}>{footer}</Text>
 
-      {/* ── Daily streak rewards ── */}
+      {/* ── Reward cycle ── */}
       <View style={styles.rewardHeader}>
-        <Text style={styles.cardEyebrow}>DAILY STREAK BONUS</Text>
+        <Text style={styles.cardEyebrow}>Check-in rewards</Text>
         <Text style={styles.rewardHint}>repeats every 7 days</Text>
       </View>
       <View style={styles.rewardRow}>
         {STREAK_REWARD_TABLE.map((coins, i) => {
           const day = i + 1;
           const isCurrent = day === rewardDayIndex;
-          const isEarned = day < rewardDayIndex || (isCurrent && todayClaimed);
+          const isEarned =
+            day < rewardDayIndex || (isCurrent && checkedInToday);
           return (
             <View
               key={day}
               style={[
                 styles.rewardChip,
+                isCurrent && !isEarned && styles.rewardChipCurrent,
                 isEarned && styles.rewardChipEarned,
-                isCurrent && styles.rewardChipCurrent,
               ]}
             >
               <Text
@@ -105,35 +136,40 @@ export function WeeklyStreak({
               >
                 {isEarned ? '✓' : coins}
               </Text>
-              {!isEarned && <Text style={styles.rewardCoinIcon}>🪙</Text>}
+              {!isEarned && (
+                <View style={styles.rewardCoinIcon}>
+                  <FitCoin size={13} />
+                </View>
+              )}
             </View>
           );
         })}
       </View>
-      <Text style={styles.streakFooter}>{rewardFooter}</Text>
+
+      <Text style={styles.streakFooter}>
+        {checkedInToday
+          ? `Checked in · +${todayCoins} ${FITCOINS}. Come back tomorrow for ${
+              STREAK_REWARD_TABLE[rewardDayIndex % STREAK_REWARD_TABLE.length]
+            }.`
+          : `Check in today for ${todayCoins} ${FITCOINS}. Miss a day and the streak restarts.`}
+      </Text>
+
+      {!checkedInToday && (
+        <ClaimRewardButton
+          coins={todayCoins}
+          action="Check in"
+          onClaim={onCheckIn}
+          claim={claim}
+        />
+      )}
     </View>
   );
 }
 
-function buildRewardFooter(dayIndex: number, claimed: boolean): string {
-  if (dayIndex <= 0) {
-    return `Complete a workout today to earn ${STREAK_REWARD_TABLE[0]} coins (Day 1).`;
-  }
-  const coins = STREAK_REWARD_TABLE[dayIndex - 1];
-  if (claimed) {
-    const next = dayIndex % STREAK_REWARD_TABLE.length;
-    const nextCoins = STREAK_REWARD_TABLE[next];
-    return `Day ${dayIndex} bonus earned: +${coins} coins. Come back tomorrow for ${nextCoins}.`;
-  }
-  return `Work out today to earn your Day ${dayIndex} bonus: ${coins} coins.`;
-}
-
 const styles = StyleSheet.create({
   streakCard: {
-    padding: 17,
-    borderRadius: 22,
-    backgroundColor: COLORS.surface,
-    marginBottom: 16,
+    ...CARD,
+    marginBottom: 24,
   },
   streakHeader: {
     flexDirection: 'row',
@@ -141,32 +177,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   cardEyebrow: {
-    fontFamily: FONTS.bold,
+    fontFamily: FONTS.medium,
     color: COLORS.textSecondary,
-    fontSize: 9,
-    letterSpacing: 1,
+    fontSize: 12,
   },
   streakTitle: {
     fontFamily: FONTS.bold,
     color: COLORS.text,
     fontSize: 18,
-    marginTop: 5,
+    marginTop: 2,
+    letterSpacing: -0.2,
   },
   streakBadge: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 7,
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 9,
+    backgroundColor: COLORS.goldLight,
+    borderRadius: RADII.pill,
   },
   streakBadgeText: {
     fontFamily: FONTS.bold,
-    color: COLORS.primary,
-    fontSize: 10,
+    color: COLORS.text,
+    fontSize: 12,
   },
   daysRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 21,
+    marginTop: 20,
   },
   dayItem: {
     alignItems: 'center',
@@ -174,103 +210,114 @@ const styles = StyleSheet.create({
   },
   dayLabel: {
     fontFamily: FONTS.medium,
-    fontSize: 11,
-    color: COLORS.textSecondary,
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
+  dayLabelToday: {
+    fontFamily: FONTS.bold,
+    color: COLORS.primary,
   },
   dayCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: COLORS.background,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
   dayCircleDone: {
     backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
   },
-  dayCircleToday: {
+  dayCircleOpen: {
+    backgroundColor: COLORS.goldLight,
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: COLORS.gold,
   },
   dateLabel: {
     fontFamily: FONTS.medium,
-    fontSize: 11,
+    fontSize: 12,
     color: COLORS.textSecondary,
   },
   dateLabelDone: {
-    color: COLORS.background,
+    fontFamily: FONTS.bold,
+    color: COLORS.textOnPrimary,
     fontSize: 15,
   },
-  dateLabelToday: {
-    color: COLORS.primary,
+  dateLabelOpen: {
+    fontFamily: FONTS.bold,
+    color: COLORS.text,
+  },
+  tapLabel: {
+    fontFamily: FONTS.bold,
+    fontSize: 9,
+    letterSpacing: 0.6,
+    color: COLORS.gold,
+    marginTop: -2,
   },
   streakFooter: {
-    fontSize: 11,
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    lineHeight: 18,
     color: COLORS.textSecondary,
-    marginTop: 15,
+    marginTop: 14,
   },
   rewardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 18,
     paddingTop: 16,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: COLORS.border,
   },
   rewardHint: {
     fontFamily: FONTS.regular,
-    fontSize: 9,
+    fontSize: 11,
     color: COLORS.textMuted,
   },
   rewardRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 12,
-    gap: 4,
+    gap: 6,
   },
   rewardChip: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    paddingVertical: 9,
+    borderRadius: RADII.sm + 2,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
   rewardChipEarned: {
     backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
   },
   rewardChipCurrent: {
-    borderWidth: 2,
-    borderColor: COLORS.primary,
+    backgroundColor: COLORS.goldLight,
+    borderColor: COLORS.gold,
   },
   rewardDay: {
-    fontFamily: FONTS.bold,
-    fontSize: 9,
+    fontFamily: FONTS.semibold,
+    fontSize: 10,
     color: COLORS.textMuted,
   },
   rewardDayActive: {
-    color: COLORS.primary,
+    color: COLORS.gold,
   },
   rewardCoins: {
     fontFamily: FONTS.bold,
-    fontSize: 13,
+    fontSize: 14,
     color: COLORS.text,
     marginTop: 3,
   },
   rewardCoinsActive: {
-    color: COLORS.primary,
-  },
-  rewardTextEarned: {
-    color: COLORS.background,
+    color: COLORS.text,
   },
   rewardCoinIcon: {
-    fontSize: 9,
-    marginTop: 1,
+    marginTop: 4,
+  },
+  rewardTextEarned: {
+    color: COLORS.textOnPrimary,
   },
 });

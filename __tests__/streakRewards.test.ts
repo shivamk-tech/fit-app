@@ -1,10 +1,14 @@
 import { STREAK_BASE_COINS, STREAK_CYCLE_DAYS } from '../src/config/rewards';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   STREAK_REWARD_TABLE,
-  nextStreakDayIndex,
+  checkIn,
+  checkInStatus,
+  previousDateKey,
   streakDayIndex,
   streakRewardCoins,
 } from '../src/services/streakRewards';
+import { walletStore } from '../src/services/wallet';
 
 describe('streakDayIndex', () => {
   test('no streak means no reward day', () => {
@@ -42,14 +46,74 @@ describe('streakRewardCoins', () => {
   });
 });
 
-describe('nextStreakDayIndex', () => {
-  test('if already worked out today, the current day is the reward day', () => {
-    expect(nextStreakDayIndex(3, true)).toBe(3);
+const TODAY = '2026-10-20';
+const YESTERDAY = '2026-10-19';
+const TWO_DAYS_AGO = '2026-10-18';
+
+describe('checkInStatus (daily check-in)', () => {
+  test('first ever day: not checked in, Day 1 pays 10', () => {
+    expect(checkInStatus([], TODAY)).toMatchObject({
+      streak: 0,
+      checkedInToday: false,
+      dayIndex: 1,
+      coins: 10,
+    });
   });
 
-  test('if not yet worked out today, the next day is the reward day', () => {
-    expect(nextStreakDayIndex(3, false)).toBe(4);
-    expect(nextStreakDayIndex(0, false)).toBe(1);
-    expect(nextStreakDayIndex(7, false)).toBe(1);
+  test('checked in yesterday: today continues the streak as Day 2', () => {
+    expect(checkInStatus([YESTERDAY], TODAY)).toMatchObject({
+      streak: 1,
+      checkedInToday: false,
+      dayIndex: 2,
+      coins: 20,
+    });
+  });
+
+  test('checked in today: streak includes today and nothing more to claim', () => {
+    expect(checkInStatus([YESTERDAY, TODAY], TODAY)).toMatchObject({
+      streak: 2,
+      checkedInToday: true,
+      dayIndex: 2,
+    });
+  });
+
+  test('missing a day restarts the streak at Day 1', () => {
+    expect(checkInStatus([TWO_DAYS_AGO], TODAY)).toMatchObject({
+      streak: 0,
+      dayIndex: 1,
+      coins: 10,
+    });
+  });
+
+  test('after 7 days in a row the cycle restarts at 10 coins', () => {
+    let d = TODAY;
+    const week: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      d = previousDateKey(d);
+      week.push(d);
+    }
+    expect(checkInStatus(week, TODAY)).toMatchObject({
+      streak: 7,
+      dayIndex: 1,
+      coins: 10,
+    });
+  });
+
+  test('previousDateKey crosses month boundaries', () => {
+    expect(previousDateKey('2026-11-01')).toBe('2026-10-31');
+  });
+});
+
+describe('checkIn', () => {
+  beforeEach(() => AsyncStorage.clear());
+
+  test('pays the day’s coins once and ticks today', async () => {
+    await walletStore.load();
+    const before = walletStore.snapshot().balance;
+    const first = await checkIn(TODAY);
+    const again = await checkIn(TODAY);
+    expect(first).toMatchObject({ checkedInToday: true, awarded: 10 });
+    expect(again.awarded).toBe(0);
+    expect(walletStore.snapshot().balance).toBe(before + 10);
   });
 });

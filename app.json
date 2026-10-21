@@ -1,4 +1,8 @@
 {
   "name": "fitrewards",
-  "displayName": "fitrewards"
+  "displayName": "fitrewards",
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-4970387894307683~9250878404",
+    "ios_app_id": "ca-app-pub-3940256099942544~1458002511"
+  }
 }

@@ -1,123 +1,219 @@
 import React from 'react';
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { COINS_PER_REWARD, STEPS_PER_REWARD } from '../config/rewards';
+import { FitCoin, FITCOINS } from '../components/FitCoin';
+import { FadeIn } from '../components/ui/FadeIn';
+import { DAILY_GOAL_COINS, DAILY_STEP_GOAL } from '../config/rewards';
 import { useStepTracker } from '../hooks/useStepTracker';
 import { COLORS } from '../theme/colors';
+import { RADII } from '../theme/layout';
 import { FONTS } from '../theme/typography';
 import type { RewardsScreenProps } from '../types/navigation';
 import type { CoinTransaction } from '../types/steps';
 import { screenStyles } from './screenStyles';
 
-function formatWhen(iso: string) {
+function isToday(iso: string) {
   const d = new Date(iso);
   const today = new Date();
-  const sameDay =
+  return (
     d.getFullYear() === today.getFullYear() &&
     d.getMonth() === today.getMonth() &&
-    d.getDate() === today.getDate();
-  const time = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    d.getDate() === today.getDate()
+  );
+}
+
+function formatWhen(iso: string) {
+  const d = new Date(iso);
+  const sameDay = isToday(iso);
+  const time = d.toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
   if (sameDay) return `Today · ${time}`;
-  return `${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · ${time}`;
+  return `${d.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+  })} · ${time}`;
 }
 
 function LedgerRow({ tx }: { tx: CoinTransaction }) {
   const positive = tx.amount > 0;
-  const icon = !positive ? '🎁' : /streak/i.test(tx.reason) ? '🔥' : '👟';
+  const isStreak = /streak/i.test(tx.reason);
+  const icon = !positive ? '🎁' : isStreak ? '🔥' : '👟';
   return (
-    <View style={styles.ledgerRow}>
-      <Text style={styles.ledgerIcon}>{icon}</Text>
+    <View style={screenStyles.comingCard}>
+      <View
+        style={[
+          screenStyles.rowIcon,
+          positive && isStreak && styles.iconStreak,
+          !positive && styles.iconSpend,
+        ]}
+      >
+        <Text style={screenStyles.comingIcon}>{icon}</Text>
+      </View>
       <View style={screenStyles.workoutInfo}>
         <Text style={screenStyles.workoutName}>{tx.reason}</Text>
         <Text style={screenStyles.workoutDetail}>{formatWhen(tx.at)}</Text>
       </View>
-      <Text style={[styles.ledgerAmount, !positive && styles.ledgerAmountNegative]}>
-        {positive ? '+' : ''}
-        {tx.amount}
-      </Text>
+      <View style={[styles.amountPill, !positive && styles.amountPillNegative]}>
+        <Text
+          style={[
+            styles.ledgerAmount,
+            !positive && styles.ledgerAmountNegative,
+          ]}
+        >
+          {positive ? '+' : ''}
+          {tx.amount}
+        </Text>
+        <FitCoin size={14} />
+      </View>
     </View>
   );
 }
 
 export function RewardsScreen(_props: RewardsScreenProps) {
-  const { wallet, todaySteps, todayCoins, ready } = useStepTracker();
+  const { wallet, todaySteps, ready } = useStepTracker();
+  // Everything earned today (steps goal, check-in, …), from the ledger.
+  const earnedToday = wallet.ledger
+    .filter(tx => tx.amount > 0 && isToday(tx.at))
+    .reduce((sum, tx) => sum + tx.amount, 0);
 
   return (
     <ScrollView
+      showsVerticalScrollIndicator={false}
       removeClippedSubviews={Platform.OS === 'android'}
-      contentContainerStyle={[screenStyles.content, styles.content]}
+      contentContainerStyle={screenStyles.content}
     >
-      <Text style={screenStyles.pageTitle}>Your rewards</Text>
-      <Text style={screenStyles.pageSubtitle}>
-        {COINS_PER_REWARD} coins per {STEPS_PER_REWARD.toLocaleString('en-IN')} steps, plus a daily workout streak bonus.
-      </Text>
-
-      <View style={screenStyles.pointsCard}>
-        <Text style={screenStyles.pointsEyebrow}>COIN BALANCE</Text>
-        <Text style={screenStyles.pointsValue}>
-          {ready ? wallet.balance : '—'}{' '}
-          <Text style={screenStyles.pointsUnit}>coins</Text>
+      <FadeIn>
+        <Text style={screenStyles.pageTitle}>Your rewards</Text>
+        <Text style={screenStyles.pageSubtitle}>
+          Walk {DAILY_STEP_GOAL.toLocaleString('en-IN')} steps a day for{' '}
+          {DAILY_GOAL_COINS} {FITCOINS}, plus daily check-in rewards.
         </Text>
-        <Text style={screenStyles.pointsNote}>
-          {todaySteps.toLocaleString('en-IN')} steps today · {todayCoins} coins earned today
-        </Text>
-      </View>
+      </FadeIn>
 
-      <Text style={[screenStyles.sectionTitle, styles.heading]}>Recent activity</Text>
-      {wallet.ledger.length === 0 ? (
-        <View style={screenStyles.comingCard}>
-          <Text style={screenStyles.comingIcon}>👟</Text>
-          <View style={screenStyles.workoutInfo}>
-            <Text style={screenStyles.workoutName}>No coins yet</Text>
-            <Text style={screenStyles.workoutDetail}>
-              Walk {STEPS_PER_REWARD.toLocaleString('en-IN')} steps to earn your first {COINS_PER_REWARD} coins.
-            </Text>
+      <FadeIn delay={60}>
+        <View style={screenStyles.pointsCardShadow}>
+          <View style={screenStyles.pointsCard}>
+            <View style={screenStyles.pointsOrb} />
+            <Text style={screenStyles.pointsEyebrow}>FITCOIN BALANCE</Text>
+            <View style={styles.balanceRow}>
+              <FitCoin size={36} />
+              <Text style={screenStyles.pointsValue}>
+                {ready ? wallet.balance.toLocaleString('en-IN') : '—'}{' '}
+                <Text style={screenStyles.pointsUnit}>{FITCOINS}</Text>
+              </Text>
+            </View>
+            <View style={screenStyles.pointsStatRow}>
+              <View style={screenStyles.pointsStat}>
+                <Text style={screenStyles.pointsStatValue}>
+                  {todaySteps.toLocaleString('en-IN')}
+                </Text>
+                <Text style={screenStyles.pointsNote}>steps today</Text>
+              </View>
+              <View style={screenStyles.pointsStat}>
+                <Text style={screenStyles.pointsStatValue}>+{earnedToday}</Text>
+                <Text style={screenStyles.pointsNote}>FitCoins today</Text>
+              </View>
+            </View>
           </View>
         </View>
-      ) : (
-        wallet.ledger.map(tx => <LedgerRow key={tx.id} tx={tx} />)
-      )}
+      </FadeIn>
 
-      <Text style={[screenStyles.sectionTitle, styles.heading]}>Coming up</Text>
-      <View style={screenStyles.comingCard}>
-        <Text style={screenStyles.comingIcon}>🎁</Text>
-        <View style={screenStyles.workoutInfo}>
-          <Text style={screenStyles.workoutName}>Redeem coins</Text>
-          <Text style={screenStyles.workoutDetail}>
-            Redemption will be added after backend setup.
-          </Text>
+      <FadeIn delay={120}>
+        <Text style={[screenStyles.sectionTitle, styles.heading]}>
+          Recent activity
+        </Text>
+        {wallet.ledger.length === 0 ? (
+          <View style={screenStyles.comingCard}>
+            <View style={screenStyles.rowIcon}>
+              <Text style={screenStyles.comingIcon}>👟</Text>
+            </View>
+            <View style={screenStyles.workoutInfo}>
+              <Text style={screenStyles.workoutName}>No FitCoins yet</Text>
+              <Text style={screenStyles.workoutDetail}>
+                Reach {DAILY_STEP_GOAL.toLocaleString('en-IN')} steps today to
+                earn your first {DAILY_GOAL_COINS} {FITCOINS}.
+              </Text>
+            </View>
+          </View>
+        ) : (
+          wallet.ledger.map(tx => <LedgerRow key={tx.id} tx={tx} />)
+        )}
+      </FadeIn>
+
+      <FadeIn delay={180}>
+        <Text style={[screenStyles.sectionTitle, styles.heading]}>
+          Coming up
+        </Text>
+        <View style={[screenStyles.comingCard, styles.comingSoon]}>
+          <View style={[screenStyles.rowIcon, styles.iconSpend]}>
+            <Text style={screenStyles.comingIcon}>🎁</Text>
+          </View>
+          <View style={screenStyles.workoutInfo}>
+            <Text style={screenStyles.workoutName}>Redeem coins</Text>
+            <Text style={screenStyles.workoutDetail}>
+              Redemption will be added after backend setup.
+            </Text>
+          </View>
+          <View style={styles.soonPill}>
+            <Text style={styles.soonText}>SOON</Text>
+          </View>
         </View>
-      </View>
+      </FadeIn>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    flexGrow: 1,
-    backgroundColor: COLORS.background,
-  },
-  heading: {
-    marginTop: 24,
-    marginBottom: 0,
-  },
-  ledgerRow: {
+  balanceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 15,
-    marginTop: 12,
+    gap: 12,
+    marginTop: 6,
   },
-  ledgerIcon: {
-    fontSize: 22,
+  heading: {
+    marginTop: 28,
+    marginBottom: 2,
+  },
+  iconStreak: {
+    backgroundColor: COLORS.goldLight,
+  },
+  iconSpend: {
+    backgroundColor: COLORS.errorLight,
+  },
+  amountPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADII.pill,
+    backgroundColor: COLORS.successLight,
+  },
+  amountPillNegative: {
+    backgroundColor: COLORS.errorLight,
   },
   ledgerAmount: {
     fontFamily: FONTS.bold,
     color: COLORS.success,
-    fontSize: 15,
+    fontSize: 14,
   },
   ledgerAmountNegative: {
     color: COLORS.error,
+  },
+  comingSoon: {
+    opacity: 0.85,
+  },
+  soonPill: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: RADII.pill,
+    backgroundColor: COLORS.surface,
+  },
+  soonText: {
+    fontFamily: FONTS.bold,
+    color: COLORS.textMuted,
+    fontSize: 10,
+    letterSpacing: 0.6,
   },
 });

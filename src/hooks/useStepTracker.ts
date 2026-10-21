@@ -8,6 +8,8 @@ import type { StepSnapshot } from '../types/steps';
  */
 export function useStepTracker(): StepSnapshot & {
   addSteps: (count: number) => void;
+  connectHealthConnect: () => Promise<void>;
+  claimStepGoal: () => number;
 } {
   const [snapshot, setSnapshot] = useState<StepSnapshot>(() =>
     stepTracker.snapshot(),
@@ -21,5 +23,10 @@ export function useStepTracker(): StepSnapshot & {
     return unsubscribe;
   }, []);
 
-  return { ...snapshot, addSteps: count => stepTracker.addSteps(count) };
+  return {
+    ...snapshot,
+    addSteps: count => stepTracker.addSteps(count),
+    connectHealthConnect: () => stepTracker.connectHealthConnect(),
+    claimStepGoal: () => stepTracker.claimStepGoal(),
+  };
 }

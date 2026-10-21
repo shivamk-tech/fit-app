@@ -2,7 +2,7 @@
  * Pure functions for step counting and coin rewards.
  * No I/O here so everything is easy to unit test.
  */
-import { COINS_PER_REWARD, STEPS_PER_REWARD } from '../config/rewards';
+import { DAILY_GOAL_COINS, DAILY_STEP_GOAL } from '../config/rewards';
 import type { StepState } from '../types/steps';
 
 /** Local calendar date as YYYY-MM-DD (not UTC, so "today" matches the user's clock). */
@@ -14,7 +14,13 @@ export function localDateKey(d: Date = new Date()): string {
 }
 
 export function emptyStepState(date: string): StepState {
-  return { date, baseline: null, lastSensor: null, steps: 0, rewardedUnits: 0 };
+  return {
+    date,
+    baseline: null,
+    lastSensor: null,
+    steps: 0,
+    goalRewarded: false,
+  };
 }
 
 /**
@@ -71,35 +77,58 @@ export function addManualSteps(
 }
 
 /**
- * Work out how many coins are newly owed for the day's steps.
- * Returns the updated state (with rewardedUnits advanced) plus coins to pay.
+ * Take an authoritative day total (e.g. from Health Connect, which counts
+ * from midnight). It replaces whatever was counted before — including sensor
+ * or manual steps from before Health Connect was connected — so steps can't
+ * be carried over from another source. goalRewarded is kept, so switching
+ * sources never pays the goal twice.
  */
-export function settleRewards(state: StepState): {
-  state: StepState;
-  coinsEarned: number;
-  unitsEarned: number;
-} {
-  const earnedUnits = Math.floor(state.steps / STEPS_PER_REWARD);
-  const unitsEarned = Math.max(0, earnedUnits - state.rewardedUnits);
-  if (unitsEarned === 0) {
-    return { state, coinsEarned: 0, unitsEarned: 0 };
-  }
+export function applyDayTotal(
+  state: StepState,
+  total: number,
+  today: string,
+): StepState {
+  const base = state.date === today ? state : emptyStepState(today);
   return {
-    state: { ...state, rewardedUnits: earnedUnits },
-    coinsEarned: unitsEarned * COINS_PER_REWARD,
-    unitsEarned,
+    ...base,
+    baseline: null,
+    lastSensor: null,
+    steps: Math.max(0, Math.round(total)),
   };
 }
 
-export function stepsToNextReward(steps: number): number {
-  const remainder = steps % STEPS_PER_REWARD;
-  return remainder === 0 && steps > 0 ? STEPS_PER_REWARD : STEPS_PER_REWARD - remainder;
+/**
+ * Claim the daily goal reward: pays only if the goal is reached and it
+ * hasn't been claimed yet today. Returns the updated state plus coins to pay.
+ */
+export function claimGoalReward(state: StepState): {
+  state: StepState;
+  coinsEarned: number;
+} {
+  if (state.goalRewarded || state.steps < DAILY_STEP_GOAL) {
+    return { state, coinsEarned: 0 };
+  }
+  return {
+    state: { ...state, goalRewarded: true },
+    coinsEarned: DAILY_GOAL_COINS,
+  };
 }
 
-export function progressToNextReward(steps: number): number {
-  return (steps % STEPS_PER_REWARD) / STEPS_PER_REWARD;
+export function stepsToGoal(steps: number): number {
+  return Math.max(0, DAILY_STEP_GOAL - steps);
 }
 
+export function goalProgress(steps: number): number {
+  return Math.min(1, Math.max(0, steps) / DAILY_STEP_GOAL);
+}
+
+/** Coins the day's steps are worth under the goal rule. */
 export function coinsForSteps(steps: number): number {
-  return Math.floor(steps / STEPS_PER_REWARD) * COINS_PER_REWARD;
+  return steps >= DAILY_STEP_GOAL ? DAILY_GOAL_COINS : 0;
+}
+
+/** Local midnight at the start of the given YYYY-MM-DD date. */
+export function startOfLocalDay(dateKey: string): Date {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  return new Date(y, m - 1, d);
 }

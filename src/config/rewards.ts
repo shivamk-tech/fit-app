@@ -3,12 +3,13 @@
  */
 
 // ── Steps ─────────────────────────────────────────────────────────────────────
-/** Every STEPS_PER_REWARD steps walked in a day earns COINS_PER_REWARD coins. */
-export const STEPS_PER_REWARD = 1000;
-export const COINS_PER_REWARD = 10;
-
-/** Soft daily target shown in the UI (not a cap on rewards). */
-export const DAILY_STEP_GOAL = 8000;
+/**
+ * Reaching DAILY_STEP_GOAL steps in a calendar day unlocks DAILY_GOAL_COINS,
+ * claimable once per day by watching a rewarded ad (free if no ad is
+ * available). Unclaimed rewards expire at local midnight.
+ */
+export const DAILY_STEP_GOAL = 10000;
+export const DAILY_GOAL_COINS = 100;
 
 // ── Workout streak ────────────────────────────────────────────────────────────
 /**
